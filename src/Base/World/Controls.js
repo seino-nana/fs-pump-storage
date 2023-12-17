@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import Base from '../Base';
+import GSAP from 'gsap'
 export default class Controls {
     constructor() {
         this.base = new Base()
@@ -7,53 +8,74 @@ export default class Controls {
         this.resources = this.base.resources
         this.camera = this.base.camera
         this.time = this.base.time;
-        
-        this.progress = 0
-        this.dummyVector = new THREE.Vector3( 0, 0, 0 );
 
+        this.progress = 0
+        this.back = false
+        // this.dummyVector = new THREE.Vector3(0, 0, 0);
+
+        this.lerp = {
+            current: 0,
+            target: 0,
+            ease: 0.1
+        }
+        this.position = new THREE.Vector3(0, 0, 0);
+        this.lookAtposition = new THREE.Vector3(0, 0, 0);
         this.setPath()
         this.onWheel()
     }
-    setPath(){
-        this.curve = new THREE.CatmullRomCurve3( [
-            new THREE.Vector3( -10, 0, 10 ),
-            new THREE.Vector3( -5, 5, 5 ),
-            new THREE.Vector3( 0, 0, 0 ),
-            new THREE.Vector3( 5, -5, 5 ),
-            new THREE.Vector3( 10, 0, 10 )
+    setPath() {
+        this.curve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(-10, 0, 10),
+            new THREE.Vector3(-5, 5, 5),
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(5, -5, 5),
+            new THREE.Vector3(10, 0, 10)
         ], true);
-        
-        
 
-        const points = this.curve.getPoints( 50 );
-        const geometry = new THREE.BufferGeometry().setFromPoints( points );
-        
-        const material = new THREE.LineBasicMaterial( { color: 0xff0000 } );
-        
+
+
+        const points = this.curve.getPoints(50);
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+        const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+
         // Create the final object to add to the scene
-        const curveObject = new THREE.Line( geometry, material );
-        this.scene.add( curveObject );
+        const curveObject = new THREE.Line(geometry, material);
+        this.scene.add(curveObject);
     }
-    onWheel(){
-      window.addEventListener('wheel',(e) => {
-        if(e.deltaY > 0){
-            this.progress += 0.1
-        } else {
-            this.progress -= 0.1
-            if(this.progress < 0){
-                this.progress = 1
+    onWheel() {
+        window.addEventListener('wheel', (e) => {
+            if (e.deltaY > 0) {
+                this.back = false
+                this.lerp.target += 0.1
+            } else {
+                this.lerp.target -= 0.1
+                this.back = true
             }
-        }
-      })
+        })
     }
-    resize(){
+    resize() {
 
     }
-    update(){
-  
-        this.curve.getPointAt(this.progress%1,this.dummyVector)
-        // this.progress -= 0.01
+    update() {
+        this.lerp.current = GSAP.utils.interpolate(
+            this.lerp.current, 
+            this.lerp.target, 
+            this.lerp.ease
+        )
+        if(this.back){
+            this.lerp.target -= 0.001
+        } else {
+            this.lerp.target += 0.001
+        }
+        // this.lerp.target +=0.001
+        this.lerp.target = GSAP.utils.clamp(0,1,this.lerp.target)
+        this.lerp.current = GSAP.utils.clamp(0,1,this.lerp.current)
         
-        this.camera.orthographicCamera.position.copy(this.dummyVector)
+        this.curve.getPointAt(this.lerp.current, this.position)
+        this.curve.getPointAt(this.lerp.current+0.00001, this.lookAtposition)
+
+        this.camera.orthographicCamera.position.copy(this.position)
+        this.camera.orthographicCamera.lookAt(this.lookAtposition)
     }
 }

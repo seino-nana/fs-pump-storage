@@ -78,6 +78,7 @@ export default class Camera {
     }
     update() {
         this.controls.update();
+
         this.helper.matrixWorldNeedsUpdate = true
         this.helper.update()
         this.helper.position.copy(this.orthographicCamera.position)
